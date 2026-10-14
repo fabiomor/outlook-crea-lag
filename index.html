@@ -16,7 +16,7 @@ function prepare(){
  const weekday=weekdayFormat.format(target), label=dateFormat.format(target);
  const isWeekend=weekday==='Sat'||weekday==='Sun';
  const closing=weekday==='Fri'?'15:00':'16:00';
- return {label,isWeekend,subject:'Comunicazione LAG '+label,body:`Salve,\n\ncomunico che il giorno ${label} sarò in LAG dalla mia residenza dalle ore 08:00 alle ore ${closing}.`};
+ return {label,isWeekend,subject:'Comunicazione LAG '+label,body:`Ciao Laura,\n\ncomunico che il giorno ${label} sarò in LAG dalle ore 08:00 alle ore ${closing}.`};
 }
 let draft;
 function update(){draft=prepare();$('preview').textContent='Oggetto: '+draft.subject+'\n\n'+draft.body;$('create').disabled=draft.isWeekend;if(draft.isWeekend){$('message').textContent='Domani è sabato o domenica: creazione disabilitata.';}else{$('message').textContent='Controlla il testo e premi il pulsante.';}}
