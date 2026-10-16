@@ -1,34 +1,236 @@
+
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crea LAG</title><script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-<style>body{font:14px system-ui,Segoe UI,Arial,sans-serif;color:#243044;background:#f7f9fc;margin:0;padding:22px}.panel{max-width:440px;margin:auto;background:white;padding:22px;border-radius:12px;border:1px solid #e1e7ee}h1{font-size:21px;margin:0 0 10px}label{display:block;margin:15px 0 5px;font-weight:600}input{box-sizing:border-box;width:100%;padding:10px;border:1px solid #b5c0d0;border-radius:6px}button{width:100%;background:#165cba;color:white;border:0;border-radius:6px;padding:13px;margin-top:18px;cursor:pointer;font-weight:bold}button:disabled{background:#a0aabb;cursor:not-allowed}.preview{white-space:pre-wrap;line-height:1.6;background:#f1f5fa;padding:12px;border-radius:8px;margin-top:15px}.muted{color:#62748b;font-size:12px}.error{color:#a40000}</style></head>
-<body><main class="panel"><h1>Comunicazione LAG</h1><p class="muted">Prepara una nuova email senza inviarla.</p><label for="recipient">Destinatario (facoltativo)</label><input id="recipient" type="email" placeholder="nome@dominio.it" autocomplete="email"/><div id="preview" class="preview"></div><p id="message" role="status" class="muted"></p><button id="create" disabled>Apri nuova email</button></main>
-<script>
-(function(){
-'use strict';
-const $=id=>document.getElementById(id);
-const dateFormat=new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',day:'2-digit',month:'2-digit'});
-const weekdayFormat=new Intl.DateTimeFormat('en-US',{timeZone:'Europe/Rome',weekday:'short'});
-function prepare(){
- // Calcola il giorno di calendario successivo in Europa/Roma (non +24 ore locali).
- const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
- const p=Object.fromEntries(parts.map(x=>[x.type,x.value]));
- const target=new Date(Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day)+1,12));
- const weekday=weekdayFormat.format(target), label=dateFormat.format(target);
- const isWeekend=weekday==='Sat'||weekday==='Sun';
- const closing=weekday==='Fri'?'15:00':'16:00';
- return {label,isWeekend,subject:'Comunicazione LAG '+label,body:`Ciao Laura,\n\ncomunico che il giorno ${label} sarò in LAG dalle ore 08:00 alle ore ${closing}.`};
-}
-let draft;
-function update(){draft=prepare();$('preview').textContent='Oggetto: '+draft.subject+'\n\n'+draft.body;$('create').disabled=draft.isWeekend;if(draft.isWeekend){$('message').textContent='Domani è sabato o domenica: creazione disabilitata.';}else{$('message').textContent='Controlla il testo e premi il pulsante.';}}
-$('recipient').addEventListener('input',()=>{try{localStorage.setItem('lag_recipient',$('recipient').value.trim());}catch(e){}});
-try{$('recipient').value=localStorage.getItem('lag_recipient')||'';}catch(e){}
-$('create').addEventListener('click',()=>{
-  update();if(draft.isWeekend)return;
-  if(!window.Office||!Office.context||!Office.context.mailbox){$('message').textContent='Apri questa pagina dall’interno dell’add-in Outlook.';return;}
-  const email=$('recipient').value.trim();if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){$('message').textContent='Indirizzo email non valido.';return;}
-  const form={subject:draft.subject,htmlBody:draft.body.split('\n').map(x=>x?'<p>'+x.replaceAll('&','&amp;').replaceAll('<','&lt;')+'</p>':'<p><br></p>').join(''),toRecipients:email?[email]:[]};
-  try{Office.context.mailbox.displayNewMessageForm(form);$('message').textContent='Composizione aperta. Controlla il messaggio e salvalo oppure invialo manualmente.';}catch(e){$('message').textContent='Impossibile aprire la composizione: '+e.message;}
-});
-update();
-})();
-</script></body></html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Crea LAG</title>
+
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+
+  <style>
+    body {
+      font: 14px system-ui, Segoe UI, Arial, sans-serif;
+      color: #243044;
+      background: #f7f9fc;
+      margin: 0;
+      padding: 22px;
+    }
+    .panel {
+      max-width: 440px;
+      margin: auto;
+      background: white;
+      padding: 22px;
+      border-radius: 12px;
+      border: 1px solid #e1e7ee;
+    }
+    h1 { font-size: 21px; margin: 0 0 10px; }
+    label { display: block; margin: 15px 0 5px; font-weight: 600; }
+    input {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #b5c0d0;
+      border-radius: 6px;
+    }
+    button {
+      width: 100%;
+      background: #165cba;
+      color: white;
+      border: 0;
+      border-radius: 6px;
+      padding: 13px;
+      margin-top: 18px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:disabled {
+      background: #a0aabb;
+      cursor: not-allowed;
+    }
+    .preview {
+      white-space: pre-wrap;
+      line-height: 1.6;
+      background: #f1f5fa;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 15px;
+    }
+    .muted { color: #62748b; font-size: 12px; }
+    .error { color: #a40000; }
+  </style>
+</head>
+
+<body>
+  <main class="panel">
+    <h1>Comunicazione LAG</h1>
+    <p class="muted">Prepara una nuova email senza inviarla.</p>
+
+    <label for="recipient">Destinatario (facoltativo)</label>
+    <input
+      id="recipient"
+      type="email"
+      placeholder="nome@dominio.it"
+      autocomplete="email"
+    />
+
+    <div id="preview" class="preview"></div>
+    <p id="message" role="status" class="muted"></p>
+
+    <button id="create" disabled>Apri nuova email</button>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const $ = id => document.getElementById(id);
+
+      const dateFormat = new Intl.DateTimeFormat('it-IT', {
+        timeZone: 'Europe/Rome',
+        day: '2-digit',
+        month: '2-digit'
+      });
+
+      const weekdayFormat = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Europe/Rome',
+        weekday: 'short'
+      });
+
+      function prepare() {
+
+        // Legge la data attuale nel fuso orario italiano.
+        const parts = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Europe/Rome',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).formatToParts(new Date());
+
+        const p = Object.fromEntries(
+          parts.map(x => [x.type, x.value])
+        );
+
+        // Parte dal giorno successivo.
+        const target = new Date(Date.UTC(
+          Number(p.year),
+          Number(p.month) - 1,
+          Number(p.day) + 1,
+          12
+        ));
+
+        // Salta sabato e domenica.
+        while (
+          target.getUTCDay() === 0 ||
+          target.getUTCDay() === 6
+        ) {
+          target.setUTCDate(target.getUTCDate() + 1);
+        }
+
+        const weekday = weekdayFormat.format(target);
+        const label = dateFormat.format(target);
+
+        // Il venerdì si termina alle 15:00.
+        const closing = weekday === 'Fri'
+          ? '15:00'
+          : '16:00';
+
+        return {
+          label,
+          subject: 'Comunicazione LAG ' + label,
+          body: `Ciao Laura,
+
+comunico che il giorno ${label} sarò in LAG dalle ore 08:00 alle ore ${closing}.`
+        };
+      }
+
+      let draft;
+
+      function update() {
+        draft = prepare();
+
+        $('preview').textContent =
+          'Oggetto: ' + draft.subject +
+          '\n\n' + draft.body;
+
+        $('create').disabled = false;
+        $('message').textContent =
+          'Controlla il testo e premi il pulsante.';
+      }
+
+      // Memorizza il destinatario.
+      $('recipient').addEventListener('input', () => {
+        try {
+          localStorage.setItem(
+            'lag_recipient',
+            $('recipient').value.trim()
+          );
+        } catch (e) {}
+      });
+
+      try {
+        $('recipient').value =
+          localStorage.getItem('lag_recipient') || '';
+      } catch (e) {}
+
+      // Apertura della nuova email in Outlook.
+      $('create').addEventListener('click', () => {
+
+        update();
+
+        if (
+          !window.Office ||
+          !Office.context ||
+          !Office.context.mailbox
+        ) {
+          $('message').textContent =
+            'Apri questa pagina dall’interno dell’add-in Outlook.';
+          return;
+        }
+
+        const email = $('recipient').value.trim();
+
+        if (
+          email &&
+          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+        ) {
+          $('message').textContent =
+            'Indirizzo email non valido.';
+          return;
+        }
+
+        const form = {
+          subject: draft.subject,
+
+          htmlBody: draft.body
+            .split('\n')
+            .map(x => x
+              ? '<p>' +
+                x.replaceAll('&', '&amp;')
+                 .replaceAll('<', '&lt;') +
+                '</p>'
+              : '<p><br></p>'
+            )
+            .join(''),
+
+          toRecipients: email ? [email] : []
+        };
+
+        try {
+          Office.context.mailbox.displayNewMessageForm(form);
+
+          $('message').textContent =
+            'Composizione aperta. Controlla il messaggio e salvalo oppure invialo manualmente.';
+
+        } catch (e) {
+          $('message').textContent =
+            'Impossibile aprire la composizione: ' + e.message;
+        }
+      });
+
+      update();
+
+    })();
+  </script>
+</body>
+</html>
